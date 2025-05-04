@@ -110,6 +110,8 @@ static int kernel_init(void *);
 extern void init_IRQ(void);
 extern void fork_init(void);
 extern void radix_tree_init(void);
+extern void ksu_init(void);
+late_initcall(ksu_init);
 
 int rkp_support_large_memory;
 EXPORT_SYMBOL(rkp_support_large_memory);
