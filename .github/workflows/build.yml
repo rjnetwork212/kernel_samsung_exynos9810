@@ -18,7 +18,7 @@ jobs:
 
     - name: Clone Toolchain
       run: |
-        git clone --depth=1 https://github.com/Hiro1508/aarch64-gnu-toolchain.git toolchain
+        git clone https://github.com/theradcolor/aarch64-linux-gnu -b stable-gcc --depth=1
 
     - name: Add KernelSU Next
       run: |
