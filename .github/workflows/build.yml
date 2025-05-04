@@ -14,7 +14,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y bc bison flex libssl-dev libelf-dev build-essential curl git
+        sudo apt install -y bc bison flex libfl-dev libssl-dev libelf-dev build-essential curl git
 
     - name: Clone Toolchain
       run: |
