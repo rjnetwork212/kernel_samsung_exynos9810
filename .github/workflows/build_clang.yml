@@ -33,10 +33,26 @@ jobs:
         make LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-android- ARCH=arm64 SUBARCH=arm64 exynos9810_defconfig
         make LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-android- ARCH=arm64 SUBARCH=arm64 -j$(nproc) V=2 | tee build.log
 
+    - name: Check Kernel Output
+      run: |
+        echo ">>> arch/arm64/boot/"
+        ls -lh arch/arm64/boot/ || true
+        echo ">>> arch/arm64/boot/dts/"
+        ls -lh arch/arm64/boot/dts/ || true
+
     - name: Package into Flashable ZIP
       run: |
         git clone https://github.com/osm0sis/AnyKernel3.git
-        cp arch/arm64/boot/Image AnyKernel3/zImage
+        if [ -f arch/arm64/boot/Image ]; then
+          cp arch/arm64/boot/Image AnyKernel3/zImage
+        elif [ -f arch/arm64/boot/Image.gz ]; then
+          cp arch/arm64/boot/Image.gz AnyKernel3/zImage
+        elif [ -f arch/arm64/boot/Image.gz-dtb ]; then
+          cp arch/arm64/boot/Image.gz-dtb AnyKernel3/zImage
+        else
+          echo "❌ ERROR: No kernel image found in arch/arm64/boot/"
+          exit 1
+        fi
         cd AnyKernel3
         zip -r9 ../KernelSU_Flashable.zip *
 
@@ -51,4 +67,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: full-build-log
-        path: build.loga
+        path: build.log
