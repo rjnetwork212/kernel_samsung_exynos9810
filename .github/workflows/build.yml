@@ -1,4 +1,4 @@
-name: Build KernelSU Kernel
+name: Build KernelSU Exynos9810
 
 on:
   workflow_dispatch:
@@ -18,43 +18,29 @@ jobs:
 
     - name: Clone Toolchain
       run: |
-        git clone https://github.com/theradcolor/aarch64-linux-gnu -b stable-gcc --depth=1
+        git clone --depth=1 https://github.com/theradcolor/aarch64-linux-gnu -b stable-gcc toolchain
 
-    - name: Add KernelSU Next
+    - name: Add KernelSU Next + susfs
       run: |
-        git clone --depth=1 -b next https://github.com/tiann/KernelSU
-        echo 'obj-y += KernelSU/kernel/' >> Makefile
-
-    - name: Add susfs
-      run: |
-        git clone https://gitlab.com/simonpunk/susfs4ksu.git
-        cp -r susfs4ksu/fs/susfs fs/
-        echo 'obj-$(CONFIG_SUSFS) += susfs/' >> fs/Makefile
-        echo 'source "fs/susfs/Kconfig"' >> fs/Kconfig
-
-    - name: Apply defconfig
-      run: |
-        export ARCH=arm64
-        export CROSS_COMPILE=$(pwd)/toolchain/bin/aarch64-linux-gnu-
-        make exynos9810_defconfig
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next-susfs/kernel/setup.sh" | bash -s next-susfs
 
     - name: Build Kernel
       run: |
         export ARCH=arm64
+        export SUBARCH=arm64
         export CROSS_COMPILE=$(pwd)/toolchain/bin/aarch64-linux-gnu-
+        make exynos9810_defconfig
         make -j$(nproc)
 
-    - name: Clone AnyKernel3
+    - name: Package into Flashable ZIP
       run: |
         git clone https://github.com/osm0sis/AnyKernel3.git
         cp arch/arm64/boot/Image.gz-dtb AnyKernel3/zImage
-
-    - name: Create Flashable ZIP
-      run: |
         cd AnyKernel3
         zip -r9 ../KernelSU_Flashable.zip *
 
-    - name: Upload ZIP
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: KernelSU_ZIP
