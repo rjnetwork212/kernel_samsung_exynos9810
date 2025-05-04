@@ -1,4 +1,4 @@
-name: Build KernelSU Exynos9810 (Clang NDK r25)
+name: Build KernelSU Exynos9810 (Force Image Target)
 
 on:
   workflow_dispatch:
@@ -27,11 +27,14 @@ jobs:
         curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
         curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next-susfs/kernel/setup.sh" | bash -s next-susfs
 
-    - name: Build Kernel with Android Clang
+    - name: Build Kernel Defconfig + Attempt Image Target
       run: |
         export PATH=$(pwd)/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
         make LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-android- ARCH=arm64 SUBARCH=arm64 exynos9810_defconfig
-        make LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-android- ARCH=arm64 SUBARCH=arm64 -j$(nproc) V=2 | tee build.log
+        make LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-android- ARCH=arm64 SUBARCH=arm64 -j$(nproc) V=1 || true
+        make LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-android- ARCH=arm64 SUBARCH=arm64 Image -j$(nproc) V=1 || true
+        make LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-android- ARCH=arm64 SUBARCH=arm64 zImage -j$(nproc) V=1 || true
+        make LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-android- ARCH=arm64 SUBARCH=arm64 dtbs -j$(nproc) V=1 || true
 
     - name: Check Kernel Output
       run: |
