@@ -36,7 +36,7 @@ jobs:
     - name: Package into Flashable ZIP
       run: |
         git clone https://github.com/osm0sis/AnyKernel3.git
-        cp arch/arm64/boot/Image.gz-dtb AnyKernel3/zImage
+        cp arch/arm64/boot/Image AnyKernel3/zImage
         cd AnyKernel3
         zip -r9 ../KernelSU_Flashable.zip *
 
@@ -51,4 +51,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: full-build-log
-        path: build.log
+        path: build.loga
