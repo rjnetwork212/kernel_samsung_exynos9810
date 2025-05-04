@@ -1,4 +1,4 @@
-name: Build KernelSU Exynos9810 (Clang)
+name: Build KernelSU Exynos9810 (Clang NDK r25)
 
 on:
   workflow_dispatch:
@@ -14,25 +14,24 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y bc bison flex libfl-dev libssl-dev libelf-dev build-essential curl git
+        sudo apt install -y bc bison flex libfl-dev libssl-dev libelf-dev build-essential curl git unzip
 
-    - name: Download Android Clang 14 Toolchain
+    - name: Download Android NDK r25 (Clang 14.0.6)
       run: |
-        mkdir -p android-clang
-        curl -LO https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r450784d.tar.gz
-        tar -xzf clang-r450784d.tar.gz -C android-clang
+        curl -o ndk.zip https://dl.google.com/android/repository/android-ndk-r25-linux.zip
+        unzip -q ndk.zip
+        mv android-ndk-r25 android-ndk
 
     - name: Add KernelSU Next + susfs
       run: |
         curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
         curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next-susfs/kernel/setup.sh" | bash -s next-susfs
 
-    - name: Build Kernel with Clang
+    - name: Build Kernel with Android Clang
       run: |
         export ARCH=arm64
         export SUBARCH=arm64
-        export PATH=$(pwd)/android-clang/bin:$PATH
-        export CLANG_TRIPLE=aarch64-linux-gnu-
+        export PATH=$(pwd)/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
         export CROSS_COMPILE=aarch64-linux-android-
         export CC=clang
         make exynos9810_defconfig
