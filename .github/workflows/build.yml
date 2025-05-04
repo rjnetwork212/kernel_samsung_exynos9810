@@ -31,7 +31,7 @@ jobs:
         export SUBARCH=arm64
         export CROSS_COMPILE=$(pwd)/toolchain/bin/aarch64-linux-gnu-
         make exynos9810_defconfig
-        make -j$(nproc)
+        make -j$(nproc) V=1
 
     - name: Package into Flashable ZIP
       run: |
