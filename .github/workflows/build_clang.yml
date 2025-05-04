@@ -1,0 +1,59 @@
+name: Build KernelSU Exynos9810 (Clang)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout Source
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y bc bison flex libfl-dev libssl-dev libelf-dev build-essential curl git
+
+    - name: Download Android Clang 14 Toolchain
+      run: |
+        mkdir -p android-clang
+        curl -LO https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r450784d.tar.gz
+        tar -xzf clang-r450784d.tar.gz -C android-clang
+
+    - name: Add KernelSU Next + susfs
+      run: |
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next-susfs/kernel/setup.sh" | bash -s next-susfs
+
+    - name: Build Kernel with Clang
+      run: |
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export PATH=$(pwd)/android-clang/bin:$PATH
+        export CLANG_TRIPLE=aarch64-linux-gnu-
+        export CROSS_COMPILE=aarch64-linux-android-
+        export CC=clang
+        make exynos9810_defconfig
+        make -j$(nproc) V=2 | tee build.log
+
+    - name: Package into Flashable ZIP
+      run: |
+        git clone https://github.com/osm0sis/AnyKernel3.git
+        cp arch/arm64/boot/Image.gz-dtb AnyKernel3/zImage
+        cd AnyKernel3
+        zip -r9 ../KernelSU_Flashable.zip *
+
+    - name: Upload Flashable ZIP
+      uses: actions/upload-artifact@v4
+      with:
+        name: KernelSU_ZIP
+        path: KernelSU_Flashable.zip
+
+    - name: Upload Full Build Log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: full-build-log
+        path: build.log
