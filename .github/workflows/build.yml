@@ -1,0 +1,61 @@
+name: Build KernelSU Kernel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y bc bison flex libssl-dev libelf-dev build-essential curl git
+
+    - name: Clone Toolchain
+      run: |
+        git clone --depth=1 https://github.com/Hiro1508/aarch64-gnu-toolchain.git toolchain
+
+    - name: Add KernelSU Next
+      run: |
+        git clone --depth=1 -b next https://github.com/tiann/KernelSU
+        echo 'obj-y += KernelSU/kernel/' >> Makefile
+
+    - name: Add susfs
+      run: |
+        git clone https://gitlab.com/simonpunk/susfs4ksu.git
+        cp -r susfs4ksu/fs/susfs fs/
+        echo 'obj-$(CONFIG_SUSFS) += susfs/' >> fs/Makefile
+        echo 'source "fs/susfs/Kconfig"' >> fs/Kconfig
+
+    - name: Apply defconfig
+      run: |
+        export ARCH=arm64
+        export CROSS_COMPILE=$(pwd)/toolchain/bin/aarch64-linux-gnu-
+        make exynos9810_defconfig
+
+    - name: Build Kernel
+      run: |
+        export ARCH=arm64
+        export CROSS_COMPILE=$(pwd)/toolchain/bin/aarch64-linux-gnu-
+        make -j$(nproc)
+
+    - name: Clone AnyKernel3
+      run: |
+        git clone https://github.com/osm0sis/AnyKernel3.git
+        cp arch/arm64/boot/Image.gz-dtb AnyKernel3/zImage
+
+    - name: Create Flashable ZIP
+      run: |
+        cd AnyKernel3
+        zip -r9 ../KernelSU_Flashable.zip *
+
+    - name: Upload ZIP
+      uses: actions/upload-artifact@v3
+      with:
+        name: KernelSU_ZIP
+        path: KernelSU_Flashable.zip
