@@ -43,6 +43,16 @@ jobs:
         echo ">>> arch/arm64/boot/dts/"
         ls -lh arch/arm64/boot/dts/ || true
 
+    - name: Check for vmlinux
+      run: |
+        ls -lh vmlinux || echo "vmlinux not found"
+
+    - name: Dump Makefile Targets
+      run: |
+        grep -iE 'image|zimage|vmlinux' arch/arm64/boot/Makefile || true
+        grep -iE 'image|zimage|vmlinux' arch/arm64/Makefile || true
+
+
     - name: Package into Flashable ZIP
       run: |
         git clone https://github.com/osm0sis/AnyKernel3.git
