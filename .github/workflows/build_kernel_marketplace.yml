@@ -1,0 +1,30 @@
+name: Build Kernel via Android-Kernel-Action with KernelSU
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v3
+
+    - name: Inject KernelSU Next + susfs
+      run: |
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next-susfs/kernel/setup.sh" | bash -s next-susfs
+
+    - name: Build kernel using Android-Kernel-Action
+      uses: fHDHR/android-kernel-action@main
+      with:
+        arch: arm64
+        defconfig: exynos9810_defconfig
+        compiler: clang
+
+    - name: Upload all artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernel-out
+        path: out/
