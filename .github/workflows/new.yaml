@@ -1,0 +1,85 @@
+name: Build Kernel Exynos9810 with KernelSU
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout Source
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y bc bison flex libfl-dev libssl-dev libelf-dev build-essential curl git unzip
+
+    - name: Clone GCC Toolchain
+      run: |
+        git clone --depth=1 https://github.com/theradcolor/aarch64-linux-gnu -b stable-gcc toolchain
+
+    - name: Download & Inject KernelSU Next + susfs
+      run: |
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next-susfs/kernel/setup.sh" | bash -s next-susfs
+
+    # (Opsional) Tambahkan patch custom lain di sini
+    # - name: Apply custom patch
+    #   run: git apply path/to/patch.patch
+
+    - name: Build Kernel (defconfig & image)
+      run: |
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export CROSS_COMPILE=$(pwd)/toolchain/bin/aarch64-linux-gnu-
+        make exynos9810_defconfig
+        make -j$(nproc) V=2 | tee build.log
+
+    - name: Check Kernel Output
+      run: |
+        echo ">>> arch/arm64/boot/"
+        ls -lh arch/arm64/boot/ || true
+        echo ">>> arch/arm64/boot/dts/"
+        ls -lh arch/arm64/boot/dts/ || true
+
+    - name: Check for vmlinux
+      run: |
+        ls -lh vmlinux || echo "vmlinux not found"
+
+    - name: Package into Flashable ZIP (AnyKernel3)
+      run: |
+        git clone https://github.com/osm0sis/AnyKernel3.git
+        if [ -f arch/arm64/boot/Image ]; then
+          cp arch/arm64/boot/Image AnyKernel3/zImage
+        elif [ -f arch/arm64/boot/Image.gz ]; then
+          cp arch/arm64/boot/Image.gz AnyKernel3/zImage
+        elif [ -f arch/arm64/boot/Image.gz-dtb ]; then
+          cp arch/arm64/boot/Image.gz-dtb AnyKernel3/zImage
+        else
+          echo "❌ ERROR: No kernel image found in arch/arm64/boot/"
+          exit 1
+        fi
+        cd AnyKernel3
+        zip -r9 ../KernelSU_Flashable.zip *
+
+    - name: Upload Flashable ZIP
+      uses: actions/upload-artifact@v4
+      with:
+        name: KernelSU_ZIP
+        path: KernelSU_Flashable.zip
+
+    - name: Upload Kernel Output Folder (Optional)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernel-out
+        path: arch/arm64/boot/
+
+    - name: Upload Full Build Log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: full-build-log
+        path: build.log
